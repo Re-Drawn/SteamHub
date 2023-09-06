@@ -1,14 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js')
 const { searchGame } = require('../../fetch_api.js')
 
-const data = new SlashCommandBuilder()
-    .setName('searchgame')
-    .setDescription('Test')
-    .addStringOption(option =>
-        option.setName('game')
-            .setDescription('The game you want to search for')
-            .setRequired(true))
-
 module.exports = {
     data: new SlashCommandBuilder()
     .setName('searchgame')
@@ -20,12 +12,22 @@ module.exports = {
 
     async execute(interaction) {
         const searchInput = interaction.options.get('game').value
-
+        let raw_games = []
+        
+        // User input exists
         if (searchInput) {
-            const games = await searchGame(searchInput)
-            console.log(games[0])
+            raw_games = await searchGame(searchInput)
         }
-        //await interaction.reply(searchInput[0])
-        await interaction.reply('Pong!')
+        
+        // Clean json data to readable format
+        if (raw_games) {
+            let games = []
+            for (game of raw_games) {
+                games.push(game.name)
+            }
+            await interaction.reply(`Your search for "${searchInput}" came with these results:\n${games.slice(0,5).join(', ')}`)
+        } else {
+            await interaction.reply(`Search for "${searchInput}" came up with no results. Please try again.`)
+        }
     }
 }
