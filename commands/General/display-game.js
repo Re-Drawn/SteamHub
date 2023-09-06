@@ -1,11 +1,38 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js')
 const { get_app_raw, searchGame } = require('../../fetch_api.js')
 
+
+function priceText(appRaw) {
+
+    const isFree = appRaw.is_free
+    const price = appRaw.price_overview
+    const release = appRaw.release_date
+
+    if (release.coming_soon) {
+        return `Coming Soon: ${release.date}`
+    }
+    if (isFree) {
+        return "Free"
+    }
+
+    if (price.discount_percent > 0) {
+        return `~~${price.initial_formatted}~~ ${price.final_formatted}`
+    } else {
+        return `${price.final_formatted}`
+    }
+
+}
+
 function createEmbed(appRaw) {
     const embed = new EmbedBuilder()
         .setTitle(appRaw.name)
         .setURL(`https://store.steampowered.com/app/${appRaw.steam_appid}`)
+        .setDescription(priceText(appRaw))
         .setImage(appRaw.header_image)
+        .addFields (
+            { name: 'Description:', value: `${appRaw.short_description}`},
+
+        )
     
     return embed
 }
