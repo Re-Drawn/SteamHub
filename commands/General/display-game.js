@@ -50,13 +50,14 @@ module.exports = {
         const searchRaw = await searchGame(searchInput)
 
         if (searchRaw) {
+            await interaction.deferReply()
             const topResultID = searchRaw[0].appid
             const appRaw = await get_app_raw(topResultID)
     
             const embed = await createEmbed(appRaw)
             await interaction.reply({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed]})
         } else {
-            await interaction.reply("Search came with no results. Please try again.")
+            await interaction.reply(`Search for "${searchInput}" came up with no results. Please try again.`)
         }
 
     }

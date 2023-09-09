@@ -31,7 +31,6 @@ async function userReviews(app_id) {
     try {
         const response = await axios.request(headers);
         if (response.data.success) {
-            console.log(response.data.reviews[0])
             return response.data.reviews
         } else {
             console.log("Doesn't exist")
@@ -78,27 +77,6 @@ async function searchGame(searchQuery) {
     } catch (error) {
         console.error(error);
     }
-}
-
-async function getFeatured() {
-
-    const headers = {
-        method: 'GET',
-        url: `https://store.steampowered.com/api/featuredcategories`
-    }
-
-    try {
-        const response = await axios.request(headers);
-        if (response.data.success) {
-            console.log(response.data)
-            return response.data
-        } else {
-            console.log("Search came up with no results")
-        }
-    } catch (error) {
-        console.error(error);
-    }
-
 }
 
 module.exports = { get_app_raw, userReviews, getUser, searchGame }
