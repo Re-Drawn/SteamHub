@@ -11,6 +11,10 @@ function createEmbed(appRaw, reviewsRaw, userRaw, reviewNum) {
         .setURL(`https://store.steampowered.com/app/${appRaw.steam_appid}`)
         .setDescription(reviewsRaw[reviewNum].review)
         .setImage(appRaw.header_image)
+        .setFields(
+            { name: 'Helpful Votes: ', value: `${reviewsRaw[reviewNum].votes_up}`, inline: true},
+            { name: 'Funny Votes: ', value: `${reviewsRaw[reviewNum].votes_funny}`, inline: true}
+        )
         .setFooter({ text: `Review ${reviewNum+1}/${reviewsRaw.length} | ${date.toLocaleDateString("en-US")}` })
     
     return embed
