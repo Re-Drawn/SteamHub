@@ -30,8 +30,7 @@ function createEmbed(appRaw) {
         .setDescription(priceText(appRaw))
         .setImage(appRaw.header_image)
         .addFields (
-            { name: 'Description:', value: `${appRaw.short_description}`},
-
+            { name: 'Description:', value: `${appRaw.short_description}`}
         )
     
     return embed
@@ -55,7 +54,7 @@ module.exports = {
             const appRaw = await get_app_raw(topResultID)
     
             const embed = await createEmbed(appRaw)
-            await interaction.reply({ embeds: [embed]})
+            await interaction.reply({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed]})
         } else {
             await interaction.reply("Search came with no results. Please try again.")
         }

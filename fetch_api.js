@@ -22,7 +22,7 @@ async function get_app_raw(app_id) {
 
 }
 
-async function get_app_review_raw(app_id) {
+async function userReviews(app_id) {
     const headers = {
         method: 'GET',
         url: `https://store.steampowered.com/appreviews/${app_id}?cursor=*&json=1&filter=summary`
@@ -31,8 +31,27 @@ async function get_app_review_raw(app_id) {
     try {
         const response = await axios.request(headers);
         if (response.data.success) {
-            console.log(response.data.query_summary)
-            return response.data.query_summary
+            console.log(response.data.reviews[0])
+            return response.data.reviews
+        } else {
+            console.log("Doesn't exist")
+        }
+    } catch (error) {
+        console.error(error);
+    }
+
+}
+
+async function getUser(steamID) {
+    const headers = {
+        method: 'GET',
+        url: `https://steamcommunity.com/actions/ajaxresolveusers?steamids=${steamID}`
+    }
+
+    try {
+        const response = await axios.request(headers);
+        if (response.data) {
+            return response.data[0]
         } else {
             console.log("Doesn't exist")
         }
@@ -82,4 +101,4 @@ async function getFeatured() {
 
 }
 
-module.exports = { get_app_raw, get_app_review_raw, searchGame }
+module.exports = { get_app_raw, userReviews, getUser, searchGame }
