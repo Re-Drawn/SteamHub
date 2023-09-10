@@ -47,22 +47,26 @@ module.exports = {
             const appRaw = await get_app_raw(topResultID)
             const reviewsRaw = await userReviews(topResultID)
 
-            // TODO: Find better way to pass reviewNum value as reference not value
-            interaction.reviewNum = 0
-            let userRaw = await getUser(reviewsRaw[interaction.reviewNum].author.steamid)
-            let embed = await createEmbed(appRaw, reviewsRaw, userRaw, interaction.reviewNum)
+            if (reviewsRaw) {
+                // TODO: Find better way to pass reviewNum value as reference not value
+                interaction.reviewNum = 0
+                let userRaw = await getUser(reviewsRaw[interaction.reviewNum].author.steamid)
+                let embed = await createEmbed(appRaw, reviewsRaw, userRaw, interaction.reviewNum)
 
-            const message = await interaction.editReply({ content: `Here are some reviews for ${appRaw.name}:`, embeds: [embed], fetchReply: true})
+                const message = await interaction.editReply({ content: `Here are some reviews for ${appRaw.name}:`, embeds: [embed], fetchReply: true})
 
-            
-            // TODO: Change this so it rotates with reactions instead of 5 second intervals
-            var interval = setInterval(function() {
-                if (interaction.reviewNum >= reviewsRaw.length-1) {
-                    clearInterval(interval)
-                } else {
-                    cycleReviews(appRaw, reviewsRaw, message, interaction)
-                }
-            }, 5000)
+                // TODO: Change this so it rotates with reactions instead of 5 second intervals
+                var interval = setInterval(function() {
+                    if (interaction.reviewNum >= reviewsRaw.length-1) {
+                        clearInterval(interval)
+                    } else {
+                        cycleReviews(appRaw, reviewsRaw, message, interaction)
+                    }
+                }, 5000)
+
+            } else {
+                await interaction.editReply(`"${appRaw.name}" has no reviews currently!`)
+            }
             
         } else {
             await interaction.reply(`Search for "${searchInput}" came up with no results. Please try again.`)

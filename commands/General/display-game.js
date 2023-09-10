@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js')
-const { get_app_raw, searchGame } = require('../../fetch_api.js')
+const { get_app_raw, searchGame, getPlayerCount } = require('../../fetch_api.js')
 const { decodeHTMLEntities } = require('../../decode-entities.js')
 
 
@@ -16,15 +16,20 @@ function priceText(appRaw) {
         return "Free"
     }
 
-    if (price.discount_percent > 0) {
-        return `~~${price.initial_formatted}~~ ${price.final_formatted}`
-    } else {
-        return `${price.final_formatted}`
-    }
+    try {
+        if (price.discount_percent > 0) {
+            return `~~${price.initial_formatted}~~ ${price.final_formatted}`
+        } else {
+            return `${price.final_formatted}`
+        }
+    } catch(error) {
+        console.error(error)
+        return "N/A"
+    } 
 
 }
 
-function createEmbed(appRaw) {
+function createEmbed(appRaw, playerCount) {
     const embed = new EmbedBuilder()
         .setTitle(appRaw.name)
         .setURL(`https://store.steampowered.com/app/${appRaw.steam_appid}`)
@@ -47,6 +52,13 @@ function createEmbed(appRaw) {
         }
         embed.addFields( { name: 'Genres: ', value: text, inline: true })
     }
+
+    if (playerCount) {
+        embed.addFields( {name: 'Player Count: ', value: `${playerCount}`, inline: true})
+    } else {
+        embed.addFields( {name: 'Player Count: ', value: 'N/A', inline: true})
+    }
+
     if (!appRaw.release_date.coming_soon) {
         embed.setFooter( { text: `Released ${appRaw.release_date.date}`})
     }
@@ -70,8 +82,9 @@ module.exports = {
         if (searchRaw) {
             const topResultID = searchRaw[0].appid
             const appRaw = await get_app_raw(topResultID)
+            const playerCount = await getPlayerCount(appRaw.steam_appid)
     
-            const embed = await createEmbed(appRaw)
+            const embed = await createEmbed(appRaw, playerCount)
             await interaction.editReply({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed]})
         } else {
             await interaction.editReply(`Search for "${searchInput}" came up with no results. Please try again.`)
