@@ -78,6 +78,25 @@ async function searchGame(searchQuery) {
             return response.data
         } else {
             console.log("Search came up with no results")
+            return false
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+async function getGameNews(appID) {
+    const headers = {
+        method: 'GET',
+        url: `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appID}&feeds=steam_community_announcements`
+    }
+
+    try {
+        const response = await axios.request(headers);
+        if (response.data) {
+            return response.data.appnews.newsitems
+        } else {
+            console.log("Search came up with no results")
         }
     } catch (error) {
         console.error(error);
@@ -186,7 +205,8 @@ async function getUserGames(steamID) {
     try {
         const response = await axios.request(headers)
         if (response.data.response.game_count) {
-            return response.data.response.games.sort(sortGames("playtime_forever"))
+            response.data.games = response.data.response.games.sort(sortGames("playtime_forever"))
+            return response.data.response
         } else {
             console.log("User profile private")
             return false
@@ -196,4 +216,4 @@ async function getUserGames(steamID) {
     }
 }
 
-module.exports = { get_app_raw, userReviews, getUser, searchGame, getPlayerCount, getUserGames }
+module.exports = { get_app_raw, userReviews, getUser, searchGame, getGameNews, getPlayerCount, getUserGames }
