@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js')
+const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ComponentType, ActionRowBuilder } = require('discord.js')
 const { get_app_raw, searchGame, getUser, userReviews } = require('../../fetch_api.js')
 
 function createEmbed(appRaw, reviewsRaw, userRaw, reviewNum) {
@@ -6,25 +6,31 @@ function createEmbed(appRaw, reviewsRaw, userRaw, reviewNum) {
     const date = new Date(unixTime * 1000)
     const username = userRaw.persona_name
 
+    // TODO: Limit review length to <= 4096
     const embed = new EmbedBuilder()
-        .setAuthor({ name: `${username}`, iconURL: `https://avatars.akamai.steamstatic.com/${userRaw.avatar_url}.jpg` })
-        .setURL(`https://store.steampowered.com/app/${appRaw.steam_appid}`)
-        .setDescription(reviewsRaw[reviewNum].review)
-        .setImage(appRaw.header_image)
-        .setFields(
-            { name: 'Helpful Votes: ', value: `${reviewsRaw[reviewNum].votes_up}`, inline: true},
-            { name: 'Funny Votes: ', value: `${reviewsRaw[reviewNum].votes_funny}`, inline: true}
-        )
-        .setFooter({ text: `Review ${reviewNum+1}/${reviewsRaw.length} | ${date.toLocaleDateString("en-US")}` })
-    
-    return embed
+    .setAuthor({ name: `${username}`, iconURL: `https://avatars.akamai.steamstatic.com/${userRaw.avatar_url}.jpg` })
+    .setURL(`https://store.steampowered.com/app/${appRaw.steam_appid}`)
+    .setImage(appRaw.header_image)
+    .setFields(
+        { name: 'Helpful Votes: ', value: `${reviewsRaw[reviewNum].votes_up}`, inline: true},
+        { name: 'Funny Votes: ', value: `${reviewsRaw[reviewNum].votes_funny}`, inline: true}
+    )
+    .setFooter({ text: `Review ${reviewNum+1}/${reviewsRaw.length} | ${date.toLocaleDateString("en-US")}` })
+
+    try {
+        embed.setDescription(reviewsRaw[reviewNum].review)
+    } catch (error) {
+        console.log(error)
+        embed.setDescription("*Error loading review.*")
+    } finally {
+        return embed
+    }
 }
 
-async function cycleReviews(appRaw, reviewsRaw, message, interaction) {
-    interaction.reviewNum = interaction.reviewNum + 1
-    userRaw = await getUser(reviewsRaw[interaction.reviewNum].author.steamid)
-    embed = await createEmbed(appRaw, reviewsRaw, userRaw, interaction.reviewNum)
-    message.edit({ content: `Here are some reviews for ${appRaw.name}:`, embeds: [embed] })
+async function cycleReviews(appRaw, reviewsRaw, reviewNum) {
+    userRaw = await getUser(reviewsRaw[reviewNum].author.steamid)
+    embed = await createEmbed(appRaw, reviewsRaw, userRaw, reviewNum)
+    return embed
 }
 
 module.exports = {
@@ -48,21 +54,55 @@ module.exports = {
             const reviewsRaw = await userReviews(topResultID)
 
             if (reviewsRaw) {
-                // TODO: Find better way to pass reviewNum value as reference not value
-                interaction.reviewNum = 0
-                let userRaw = await getUser(reviewsRaw[interaction.reviewNum].author.steamid)
-                let embed = await createEmbed(appRaw, reviewsRaw, userRaw, interaction.reviewNum)
+                let reviewNum = 0
+                let userRaw = await getUser(reviewsRaw[reviewNum].author.steamid)
+                let embed = await createEmbed(appRaw, reviewsRaw, userRaw, reviewNum)
 
-                const message = await interaction.editReply({ content: `Here are some reviews for ${appRaw.name}:`, embeds: [embed], fetchReply: true})
+                const next = new ButtonBuilder()
+                    .setCustomId("next")
+                    .setLabel("▶️")
+                    .setStyle(ButtonStyle.Secondary)
+                const prev = new ButtonBuilder()
+                    .setCustomId("prev")
+                    .setLabel("◀️")
+                    .setStyle(ButtonStyle.Secondary)
+                const buttons = new ActionRowBuilder()
+                    .addComponents(next)
 
-                // TODO: Change this so it rotates with reactions instead of 5 second intervals
-                var interval = setInterval(function() {
-                    if (interaction.reviewNum >= reviewsRaw.length-1) {
-                        clearInterval(interval)
-                    } else {
-                        cycleReviews(appRaw, reviewsRaw, message, interaction)
+                const message = await interaction.editReply({ content: `Here are some reviews for ${appRaw.name}:`, embeds: [embed], components: [buttons]})
+                
+                const filter = (interaction) => interaction.customId === 'next' || interaction.customId === 'prev';
+                const collector = message.createMessageComponentCollector({ filter, time: 15_000 });
+                collector.on('collect', async i => {
+                    // Only user who issued command
+                    if (i.user.id === interaction.user.id) {
+                        if (i.customId === 'next' && reviewNum < reviewsRaw.length-1) {
+                            reviewNum = reviewNum + 1
+                            if (reviewNum == reviewsRaw.length-1) {
+                                buttons.setComponents(prev)
+                            } else {
+                                buttons.setComponents(prev, next)
+                            }
+                        } else if (i.customId === 'prev' && reviewNum > 0) {
+                            reviewNum = reviewNum - 1
+                            if (reviewNum == 0) {
+                                buttons.setComponents(next)
+                            } else {
+                                buttons.setComponents(prev, next)
+                            }
+                        }
+                        embed = await cycleReviews(appRaw, reviewsRaw, reviewNum)
+                        message.edit({ content: `Here are some reviews for ${appRaw.name}:`, embeds: [embed], components: [buttons] })
+                        await collector.resetTimer()
                     }
-                }, 5000)
+                    // Required for component interaction
+                    await i.deferUpdate()
+                })
+
+                // Get rid of components when collection window ends
+                collector.on('end', async () => {
+                    await message.edit({ content: `Here are some reviews for ${appRaw.name}:`, embeds: [embed], components: [] })
+                });
 
             } else {
                 await interaction.editReply(`"${appRaw.name}" has no reviews currently!`)
