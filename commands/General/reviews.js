@@ -5,18 +5,31 @@ function createEmbed(appRaw, reviewsRaw, userRaw, reviewNum) {
     const unixTime = reviewsRaw[reviewNum].timestamp_created
     const date = new Date(unixTime * 1000)
     const username = userRaw.persona_name
+    let profileLink = null
+
+    if (userRaw.profile_url != '') {
+        profileLink = `id/${userRaw.profile_url}`
+    } else {
+        profileLink = `profiles/${userRaw.steamid}`
+    }
 
     // TODO: Limit review length to <= 4096
     const embed = new EmbedBuilder()
-    .setAuthor({ name: `${username}`, iconURL: `https://avatars.akamai.steamstatic.com/${userRaw.avatar_url}.jpg` })
+    .setAuthor({ name: `${username}`, url: `https://steamcommunity.com/${profileLink}/recommended/`, iconURL: `https://avatars.akamai.steamstatic.com/${userRaw.avatar_url}.jpg` })
     .setURL(`https://store.steampowered.com/app/${appRaw.steam_appid}`)
     .setImage(appRaw.header_image)
     .setFields(
+        { name: 'Hours Played:', value: `${Math.round(reviewsRaw[reviewNum].author.playtime_forever/60*100)/100}`, inline: true},
         { name: 'Helpful Votes: ', value: `${reviewsRaw[reviewNum].votes_up}`, inline: true},
         { name: 'Funny Votes: ', value: `${reviewsRaw[reviewNum].votes_funny}`, inline: true}
     )
     .setFooter({ text: `Review ${reviewNum+1}/${reviewsRaw.length} | ${date.toLocaleDateString("en-US")}` })
 
+    if (reviewsRaw[reviewNum].voted_up) {
+        embed.setThumbnail("https://community.akamai.steamstatic.com/public/shared/images/userreviews/icon_thumbsUp.png?v=1")
+    } else {
+        embed.setThumbnail("https://community.akamai.steamstatic.com/public/shared/images/userreviews/icon_thumbsDown.png?v=1")
+    }
     try {
         embed.setDescription(reviewsRaw[reviewNum].review)
     } catch (error) {

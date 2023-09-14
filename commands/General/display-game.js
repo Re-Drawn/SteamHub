@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js')
+const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js')
 const { get_app_raw, searchGame, getPlayerCount } = require('../../fetch_api.js')
 const { decodeHTMLEntities } = require('../../decode-entities.js')
 
@@ -80,12 +80,47 @@ module.exports = {
         const searchRaw = await searchGame(searchInput)
 
         if (searchRaw) {
-            const topResultID = searchRaw[0].appid
-            const appRaw = await get_app_raw(topResultID)
-            const playerCount = await getPlayerCount(appRaw.steam_appid)
+            let gameNumber = 0
+            let topResultID = searchRaw[gameNumber].appid
+            let appRaw = await get_app_raw(topResultID)
+            let playerCount = await getPlayerCount(appRaw.steam_appid)
+
+            const wrongGame = new ButtonBuilder()
+                .setCustomId('wronggame')
+                .setLabel('Wrong Game?')
+                .setStyle(ButtonStyle.Danger)
+            
+            const buttons = new ActionRowBuilder()
+                .addComponents(wrongGame)
     
-            const embed = await createEmbed(appRaw, playerCount)
-            await interaction.editReply({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed]})
+            let embed = await createEmbed(appRaw, playerCount, gameNumber)
+            const message = await interaction.editReply({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
+
+            const filter = (interaction) => interaction.customId === 'wronggame';
+            const collector = message.createMessageComponentCollector({ filter, time: 15_000 });
+
+            collector.on('collect', async i => {
+                if (i.user.id === interaction.user.id) {
+                    if (gameNumber < searchRaw.length-1) {
+                        gameNumber = gameNumber + 1
+                        topResultID = searchRaw[gameNumber].appid
+                        appRaw = await get_app_raw(topResultID)
+                        playerCount = await getPlayerCount(appRaw.steam_appid)
+                        embed = await createEmbed(appRaw, playerCount, gameNumber)
+                        await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
+                        await collector.resetTimer()
+                    } else {
+                        wrongGame.setLabel("No more results.").setStyle(ButtonStyle.Secondary).setDisabled(true)
+                        await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
+                        await collector.resetTimer()
+                    }
+                }
+                await i.deferUpdate()
+            })
+
+            collector.on('end', async () => {
+                await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: []})
+            })
         } else {
             await interaction.editReply(`Search for "${searchInput}" came up with no results. Please try again.`)
         }

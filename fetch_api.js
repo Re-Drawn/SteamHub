@@ -117,6 +117,7 @@ async function getPlayerCount(appID) {
         }
     } catch (error) {
         console.error(error)
+        return false
     }
 
 }
