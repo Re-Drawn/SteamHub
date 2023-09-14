@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js')
+const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, Embed } = require('discord.js')
 const { get_app_raw, searchGame, getPlayerCount } = require('../../fetch_api.js')
 const { decodeHTMLEntities } = require('../../decode-entities.js')
 
@@ -83,36 +83,60 @@ module.exports = {
             let gameNumber = 0
             let topResultID = searchRaw[gameNumber].appid
             let appRaw = await get_app_raw(topResultID)
+            let appMovies = appRaw.movies
             let playerCount = await getPlayerCount(appRaw.steam_appid)
 
+            const trailer = new ButtonBuilder()
+                .setCustomId('trailer')
+                .setLabel('Trailer')
+                .setStyle(ButtonStyle.Primary)
             const wrongGame = new ButtonBuilder()
                 .setCustomId('wronggame')
                 .setLabel('Wrong Game?')
                 .setStyle(ButtonStyle.Danger)
+            const back = new ButtonBuilder()
+                .setCustomId('back')
+                .setLabel('Back')
+                .setStyle(ButtonStyle.Secondary)
             
             const buttons = new ActionRowBuilder()
-                .addComponents(wrongGame)
+                .addComponents(trailer, wrongGame)
     
             let embed = await createEmbed(appRaw, playerCount, gameNumber)
             const message = await interaction.editReply({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
 
-            const filter = (interaction) => interaction.customId === 'wronggame';
-            const collector = message.createMessageComponentCollector({ filter, time: 15_000 });
+            const filter = (interaction) => interaction.customId === 'wronggame' || interaction.customId === 'trailer' || interaction.customId === 'back';
+            const collector = message.createMessageComponentCollector({ filter, time: 180_000 });
 
             collector.on('collect', async i => {
                 if (i.user.id === interaction.user.id) {
-                    if (gameNumber < searchRaw.length-1) {
-                        gameNumber = gameNumber + 1
-                        topResultID = searchRaw[gameNumber].appid
-                        appRaw = await get_app_raw(topResultID)
-                        playerCount = await getPlayerCount(appRaw.steam_appid)
-                        embed = await createEmbed(appRaw, playerCount, gameNumber)
+                    if (i.customId === 'wronggame') {
+                        if (gameNumber < searchRaw.length-1) {
+                            gameNumber = gameNumber + 1
+                            topResultID = searchRaw[gameNumber].appid
+                            appRaw = await get_app_raw(topResultID)
+                            appMovies = appRaw.movies
+                            playerCount = await getPlayerCount(appRaw.steam_appid)
+                            embed = await createEmbed(appRaw, playerCount, gameNumber)
+                            await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
+                            await collector.resetTimer()
+                        } else {
+                            wrongGame.setLabel("No more results.").setStyle(ButtonStyle.Secondary).setDisabled(true)
+                            await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
+                            await collector.resetTimer()
+                        }
+                    } else if (i.customId === 'trailer') {
+                        // TODO: Get video on discord embed in different way
+                        buttons.setComponents(back)
+                        await message.edit({ content: `${appMovies[0].mp4.max}`, embeds: [], components: [buttons] })
+                        await collector.resetTimer()
+
+                    } else if (i.customId === 'back') {
+
+                        buttons.setComponents(trailer)
                         await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
                         await collector.resetTimer()
-                    } else {
-                        wrongGame.setLabel("No more results.").setStyle(ButtonStyle.Secondary).setDisabled(true)
-                        await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
-                        await collector.resetTimer()
+
                     }
                 }
                 await i.deferUpdate()

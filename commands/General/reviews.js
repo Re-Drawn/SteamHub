@@ -85,7 +85,7 @@ module.exports = {
                 const message = await interaction.editReply({ content: `Here are some reviews for ${appRaw.name}:`, embeds: [embed], components: [buttons]})
                 
                 const filter = (interaction) => interaction.customId === 'next' || interaction.customId === 'prev';
-                const collector = message.createMessageComponentCollector({ filter, time: 15_000 });
+                const collector = message.createMessageComponentCollector({ filter, time: 60_000 });
                 collector.on('collect', async i => {
                     // Only user who issued command
                     if (i.user.id === interaction.user.id) {
