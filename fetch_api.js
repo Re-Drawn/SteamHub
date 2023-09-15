@@ -2,6 +2,8 @@ const axios = require('axios')
 const { JSDOM } = require('jsdom')
 require('dotenv').config()
 
+// TODO: Add support for different country prices & languages
+// TODO: Server-side commands with mongodb database
 async function get_app_raw(app_id) {
 
     const headers = {
@@ -138,7 +140,7 @@ async function resolveVanityURL(vanity) {
     }
 }
 
-async function findUser(username) {
+async function searchUser(username) {
     // Get a session ID to make AJAX request later
     const headers = {
         url: 'https://steamcommunity.com/'
@@ -217,4 +219,4 @@ async function getUserGames(steamID) {
     }
 }
 
-module.exports = { get_app_raw, userReviews, getUser, searchGame, getGameNews, getPlayerCount, getUserGames }
+module.exports = { get_app_raw, userReviews, getUser, searchGame, getGameNews, getPlayerCount, getUserGames, searchUser }

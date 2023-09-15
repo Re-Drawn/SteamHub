@@ -18,7 +18,7 @@ function priceText(appRaw) {
 
     try {
         if (price.discount_percent > 0) {
-            return `~~${price.initial_formatted}~~ ${price.final_formatted}`
+            return `-${price.discount_percent}% ~~${price.initial_formatted}~~ ${price.final_formatted}`
         } else {
             return `${price.final_formatted}`
         }
@@ -100,13 +100,17 @@ module.exports = {
                 .setStyle(ButtonStyle.Secondary)
             
             const buttons = new ActionRowBuilder()
-                .addComponents(trailer, wrongGame)
+            if (appMovies) {
+                buttons.addComponents(trailer)
+            }
+                buttons.addComponents(wrongGame)
     
             let embed = await createEmbed(appRaw, playerCount, gameNumber)
             const message = await interaction.editReply({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
 
             const filter = (interaction) => interaction.customId === 'wronggame' || interaction.customId === 'trailer' || interaction.customId === 'back';
-            const collector = message.createMessageComponentCollector({ filter, time: 180_000 });
+            // TODO: Make collector timer increase when trailer button is clicked, but short when not clicked.
+            const collector = message.createMessageComponentCollector({ filter, time: 300_000 });
 
             collector.on('collect', async i => {
                 if (i.user.id === interaction.user.id) {
@@ -118,6 +122,11 @@ module.exports = {
                             appMovies = appRaw.movies
                             playerCount = await getPlayerCount(appRaw.steam_appid)
                             embed = await createEmbed(appRaw, playerCount, gameNumber)
+                            if (appMovies) {
+                                buttons.setComponents(trailer, wrongGame)
+                            } else {
+                                buttons.setComponents(wrongGame)
+                            }
                             await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
                             await collector.resetTimer()
                         } else {
@@ -133,7 +142,9 @@ module.exports = {
 
                     } else if (i.customId === 'back') {
 
-                        buttons.setComponents(trailer)
+                        if (appMovies) {
+                            buttons.setComponents(trailer)
+                        }
                         await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
                         await collector.resetTimer()
 
