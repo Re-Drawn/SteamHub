@@ -6,6 +6,7 @@ require('dotenv').config()
 // TODO: Server-side commands with mongodb database
 async function get_app_raw(app_id) {
 
+    // TODO: Get rid of this function with getApp as replacement
     const headers = {
         method: 'GET',
         url: `https://store.steampowered.com/api/appdetails?appids=${app_id}&cc=US`
@@ -202,13 +203,13 @@ function sortGames(property) {
 async function getUserGames(steamID) {
     const headers = {
         method: 'GET',
-        url: `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${process.env.STEAM_TOKEN}&steamid=${steamID}&include_appinfo=true`
+        url: `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${process.env.STEAM_TOKEN}&steamid=${steamID}&include_appinfo=true&include_played_free_games=true`
     }
 
     try {
         const response = await axios.request(headers)
         if (response.data.response.game_count) {
-            response.data.games = response.data.response.games.sort(sortGames("playtime_forever"))
+            response.data.response.games = response.data.response.games.sort(sortGames("playtime_forever"))
             return response.data.response
         } else {
             console.log("User profile private")
@@ -219,4 +220,26 @@ async function getUserGames(steamID) {
     }
 }
 
-module.exports = { get_app_raw, userReviews, getUser, searchGame, getGameNews, getPlayerCount, getUserGames, searchUser }
+async function getApp(appIDs) {
+
+    // TODO: Find api limits for amount of appids that can be queried at once
+    const query = appIDs.join(',')
+    const headers = {
+        method: 'GET',
+        url: `https://store.steampowered.com/api/appdetails/?appids=${query}&filters=price_overview`
+    }
+
+    try {
+        const response = await axios.request(headers)
+        if (response.data) {
+            return response.data
+        } else {
+            console.log("No results")
+            return false
+        }
+    } catch (error) {
+        console.error(error)
+    }
+}
+
+module.exports = { get_app_raw, userReviews, getUser, searchGame, getGameNews, getPlayerCount, getUserGames, searchUser, getApp }
