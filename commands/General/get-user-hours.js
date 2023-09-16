@@ -13,6 +13,7 @@ async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw) {
     if (!isPrivate) {
         let gameHours = ""
         let totalPrice = 0
+        let salePrice = 0
 
         for (let i = -1; i > -10; i--) {
             gameHours = gameHours.concat(`${-i}. ${gamesRaw.games.at(i).name}: ${Math.round(gamesRaw.games.at(i).playtime_forever/60*100)/100} hours`, "\n")
@@ -24,6 +25,7 @@ async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw) {
                 // TODO: Clean this up
                 if (!Array.isArray(pricesRaw[app].data)) {
                     totalPrice = totalPrice + pricesRaw[app].data.price_overview.initial
+                    salePrice = salePrice + pricesRaw[app].data.price_overview.final
                 }
             }
         }
@@ -33,7 +35,8 @@ async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw) {
             .setDescription(`Steam ID: ${userRaw.steamid}\nGames owned: ${gamesRaw.game_count}`)
             .addFields(
                 { name: 'Top Games by hours: ', value: `${gameHours}`, inline: true},
-                { name: 'Price of library (without sales):', value: `$${totalPrice/100} USD`, inline: true}
+                { name: 'Price of library (without sales):', value: `$${totalPrice/100} USD`, inline: true},
+                { name: 'Price of library (with sales):', value: `$${salePrice/100} USD`, inline: true}
             )
         
         return embed
@@ -53,7 +56,6 @@ module.exports = {
     .setDescription("Find a user's hours on Steam!")
     .addStringOption(option =>
         option.setName('username')
-            // TODO: Integrate steamid search to get quicker command output
             .setDescription('The username or steamid number of the user you want to search for')
             .setRequired(true)),
 
@@ -61,6 +63,27 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply()
         const searchInput = interaction.options.get('steamid').value
+        // TODO: Clean this up for searching with steamID (this is section of code is a repeat of below)
+        if (typeof(parseInt(searchInput)) === "number") {
+            const userRaw = await getUser(searchInput)
+            if (userRaw) {
+                const games = await getUserGames(userRaw.steamid)
+
+                if (games) {
+                    let ids = []
+                    for (let i = 0; i < games.games.length; i++) {
+                        ids.push(games.games[i].appid)
+                    }
+                    const prices = await getApp(ids)
+                    embed = await createEmbed(false, userRaw, games, prices)
+                    await interaction.editReply( { content: '', embeds: [embed], components: [] })
+                } else {
+                    embed = await createEmbed(true, userRaw)
+                    await interaction.editReply( { content: '', embeds: [embed], components: [] })
+                }
+                return
+            }
+        }
         const usersRaw = await searchUser(searchInput)
 
         if (usersRaw.length == 1) {

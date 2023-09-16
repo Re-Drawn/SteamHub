@@ -61,6 +61,7 @@ async function getUser(steamID) {
             return response.data[0]
         } else {
             console.log("Doesn't exist")
+            return false
         }
     } catch (error) {
         console.error(error);
