@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js')
-const { getUser, getUserGames, searchUser } = require('../../fetch_api.js')
+const { getUser, getUserGames, searchUser, getApp } = require('../../fetch_api.js')
 
 async function createUserEmbed(userRaw) {
     const embed = new EmbedBuilder()
@@ -8,21 +8,32 @@ async function createUserEmbed(userRaw) {
     return embed
 }
 
-async function createEmbed(isPrivate, userRaw, gamesRaw) {
+async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw) {
 
     if (!isPrivate) {
         let gameHours = ""
+        let totalPrice = 0
 
         for (let i = -1; i > -10; i--) {
             gameHours = gameHours.concat(`${-i}. ${gamesRaw.games.at(i).name}: ${Math.round(gamesRaw.games.at(i).playtime_forever/60*100)/100} hours`, "\n")
         }
         gameHours = gameHours.concat(`10. ${gamesRaw.games.at(-10).name}: ${Math.round(gamesRaw.games.at(-10).playtime_forever/60*100)/100} hours`)
-    
+
+        for (app in pricesRaw) {
+            if (pricesRaw[app].success) {
+                // TODO: Clean this up
+                if (!Array.isArray(pricesRaw[app].data)) {
+                    totalPrice = totalPrice + pricesRaw[app].data.price_overview.initial
+                }
+            }
+        }
+
         const embed = new EmbedBuilder()
             .setAuthor({ name: `${userRaw.persona_name}`, url: `https://steamcommunity.com/profiles/${userRaw.steamid}`, iconURL: `https://avatars.akamai.steamstatic.com/${userRaw.avatar_url}_full.jpg`})
             .setDescription(`Steam ID: ${userRaw.steamid}\nGames owned: ${gamesRaw.game_count}`)
             .addFields(
-                { name: 'Top Games by hours: ', value: `${gameHours}`}
+                { name: 'Top Games by hours: ', value: `${gameHours}`, inline: true},
+                { name: 'Price of library (without sales):', value: `$${totalPrice/100} USD`, inline: true}
             )
         
         return embed
@@ -35,7 +46,7 @@ async function createEmbed(isPrivate, userRaw, gamesRaw) {
 
 }
 
-
+// TODO: Change command to be a general user stats command for account worth (in games), steam level, top games, recent games, etc.
 module.exports = {
     data: new SlashCommandBuilder()
     .setName('getuserhours')
@@ -88,10 +99,16 @@ module.exports = {
                 await i.deferUpdate()
                 if (i.user.id === interaction.user.id) {
                     if (i.customId === 'yes') {
+                        // TODO: Clean up games.games to just games
                         const games = await getUserGames(userRaw.steamid)
 
                         if (games) {
-                            embed = await createEmbed(false, userRaw, games)
+                            let ids = []
+                            for (let i = 0; i < games.games.length; i++) {
+                                ids.push(games.games[i].appid)
+                            }
+                            const prices = await getApp(ids)
+                            embed = await createEmbed(false, userRaw, games, prices)
                             await interaction.editReply( { content: '', embeds: [embed], components: [] })
                         } else {
                             embed = await createEmbed(true, userRaw)
@@ -114,6 +131,5 @@ module.exports = {
         } else {
             await interaction.editReply(`Your search for user '${searchInput}' came up with no results. Please try again.`)
         }
-
     }
 }
