@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js')
-const { getUser, getUserGames, searchUser, getApp } = require('../../fetch_api.js')
+const { getUser, getUserGames, searchUser, getApp, getUserBadges } = require('../../fetch_api.js')
 
 async function createUserEmbed(userRaw) {
     const embed = new EmbedBuilder()
@@ -8,18 +8,25 @@ async function createUserEmbed(userRaw) {
     return embed
 }
 
-async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw) {
+// TODO: Create leaderboard for user stats
+async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw, badgesRaw) {
 
     if (!isPrivate) {
-        let gameHours = ""
+        // TODO: Figure out what can be set private and not private on a steam profile and how the api responds
+        let gameHours = "\`\`\`ml\n"
         let totalPrice = 0
         let salePrice = 0
+        // UNIX time
+        let accountAge = 0
 
+        // Top 10 games by hours played
         for (let i = -1; i > -10; i--) {
-            gameHours = gameHours.concat(`${-i}. ${gamesRaw.games.at(i).name}: ${Math.round(gamesRaw.games.at(i).playtime_forever/60*100)/100} hours`, "\n")
+            gameHours = gameHours.concat(`${-i}. ${gamesRaw.games.at(i).name.charAt(0).toUpperCase() + gamesRaw.games.at(i).name.slice(1)}: ${Math.round(gamesRaw.games.at(i).playtime_forever/60*100)/100} hours`, "\n")
         }
         gameHours = gameHours.concat(`10. ${gamesRaw.games.at(-10).name}: ${Math.round(gamesRaw.games.at(-10).playtime_forever/60*100)/100} hours`)
+        gameHours = gameHours.concat(`\`\`\``)
 
+        // Total price of user library
         for (app in pricesRaw) {
             if (pricesRaw[app].success) {
                 // TODO: Clean this up
@@ -30,13 +37,26 @@ async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw) {
             }
         }
 
+        // User badges
+        for (let i = 0; i < badgesRaw.badges.length-1; i++) {
+            if (badgesRaw.badges[i].badgeid == 1 && !badgesRaw.badges[i].appid) {
+                accountAge = badgesRaw.badges[i].completion_time
+            }
+        }
+        const accountDate = new Date(accountAge*1000)
+        const currentDate = new Date()
+
         const embed = new EmbedBuilder()
             .setAuthor({ name: `${userRaw.persona_name}`, url: `https://steamcommunity.com/profiles/${userRaw.steamid}`, iconURL: `https://avatars.akamai.steamstatic.com/${userRaw.avatar_url}_full.jpg`})
-            .setDescription(`Steam ID: ${userRaw.steamid}\nGames owned: ${gamesRaw.game_count}`)
-            .addFields(
-                { name: 'Top Games by hours: ', value: `${gameHours}`, inline: true},
-                { name: 'Price of library (without sales):', value: `$${totalPrice/100} USD`, inline: true},
-                { name: 'Price of library (with sales):', value: `$${salePrice/100} USD`, inline: true}
+            .setDescription(`Steam ID: ${userRaw.steamid}\nSteam Level: ${badgesRaw.player_level}`)
+            if (accountAge) {
+                embed.addFields( { name: 'Account Created: ', value: `\`\`\`css\n${accountDate.toLocaleDateString()} ${accountDate.toLocaleTimeString()}\n${Math.round((currentDate-accountDate)/31556952/10)/100} years old\`\`\``})
+            }
+            embed.addFields(
+                { name: 'Top Games by Hours:', value: `${gameHours}`, inline: true},
+                { name: "Games Owned:", value: 
+                `\`\`\`css\n${gamesRaw.game_count} games\`\`\`\n**Library Value:**\n\`\`\`css\n$${totalPrice/100} USD at full price\n$${salePrice/100} USD with today's sales\`\`\``, 
+                inline: true}
             )
         
         return embed
@@ -62,12 +82,13 @@ module.exports = {
     // TODO: Get faster execution time on command
     async execute(interaction) {
         await interaction.deferReply()
-        const searchInput = interaction.options.get('steamid').value
+        const searchInput = interaction.options.get('username').value
         // TODO: Clean this up for searching with steamID (this is section of code is a repeat of below)
         if (typeof(parseInt(searchInput)) === "number") {
             const userRaw = await getUser(searchInput)
             if (userRaw) {
                 const games = await getUserGames(userRaw.steamid)
+                const badges = await getUserBadges(userRaw.steamid)
 
                 if (games) {
                     let ids = []
@@ -75,7 +96,7 @@ module.exports = {
                         ids.push(games.games[i].appid)
                     }
                     const prices = await getApp(ids)
-                    embed = await createEmbed(false, userRaw, games, prices)
+                    embed = await createEmbed(false, userRaw, games, prices, badges)
                     await interaction.editReply( { content: '', embeds: [embed], components: [] })
                 } else {
                     embed = await createEmbed(true, userRaw)
@@ -124,6 +145,7 @@ module.exports = {
                     if (i.customId === 'yes') {
                         // TODO: Clean up games.games to just games
                         const games = await getUserGames(userRaw.steamid)
+                        const badges = await getUserBadges(userRaw.steamid)
 
                         if (games) {
                             let ids = []
@@ -131,7 +153,7 @@ module.exports = {
                                 ids.push(games.games[i].appid)
                             }
                             const prices = await getApp(ids)
-                            embed = await createEmbed(false, userRaw, games, prices)
+                            embed = await createEmbed(false, userRaw, games, prices, badges)
                             await interaction.editReply( { content: '', embeds: [embed], components: [] })
                         } else {
                             embed = await createEmbed(true, userRaw)

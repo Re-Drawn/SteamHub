@@ -126,6 +126,26 @@ async function getPlayerCount(appID) {
 
 }
 
+async function getUserBadges(steamID) {
+
+    const headers = {
+        method: 'GET',
+        url: `https://api.steampowered.com/IPlayerService/GetBadges/v1/?key=${process.env.STEAM_TOKEN}&steamid=${steamID}`
+    }
+
+    try {
+        const response = await axios.request(headers)
+        if (response.data.response) {
+            return response.data.response
+        } else {
+            return false
+        }
+    } catch (error) {
+        console.error(error)
+        return false
+    }
+}
+
 async function resolveVanityURL(vanity) {
     const headers = {
         method: 'GET',
@@ -243,4 +263,4 @@ async function getApp(appIDs) {
     }
 }
 
-module.exports = { get_app_raw, userReviews, getUser, searchGame, getGameNews, getPlayerCount, getUserGames, searchUser, getApp }
+module.exports = { get_app_raw, userReviews, getUser, searchGame, getGameNews, getPlayerCount, getUserGames, searchUser, getUserBadges, getApp }
