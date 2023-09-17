@@ -18,13 +18,15 @@ async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw, badgesRaw) {
         let salePrice = 0
         // UNIX time
         let accountAge = 0
+        // in minutes
+        let accountPlaytime = 0
+        let gamesPlayed = 0
 
         // Top 10 games by hours played
         for (let i = -1; i > -10; i--) {
             gameHours = gameHours.concat(`${-i}. ${gamesRaw.games.at(i).name.charAt(0).toUpperCase() + gamesRaw.games.at(i).name.slice(1)}: ${Math.round(gamesRaw.games.at(i).playtime_forever/60*100)/100} hours`, "\n")
         }
-        gameHours = gameHours.concat(`10. ${gamesRaw.games.at(-10).name}: ${Math.round(gamesRaw.games.at(-10).playtime_forever/60*100)/100} hours`)
-        gameHours = gameHours.concat(`\`\`\``)
+        gameHours = gameHours.concat(`10. ${gamesRaw.games.at(-10).name}: ${Math.round(gamesRaw.games.at(-10).playtime_forever/60*100)/100} hours\`\`\``)
 
         // Total price of user library
         for (app in pricesRaw) {
@@ -37,8 +39,16 @@ async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw, badgesRaw) {
             }
         }
 
+        // Account playtime
+        for (app in gamesRaw.games) {
+            if (gamesRaw.games[app].playtime_forever) {
+                accountPlaytime = accountPlaytime + gamesRaw.games[app].playtime_forever
+                gamesPlayed = gamesPlayed + 1
+            }
+        }
+
         // User badges
-        for (let i = 0; i < badgesRaw.badges.length-1; i++) {
+        for (let i = 0; i < badgesRaw.badges.length; i++) {
             if (badgesRaw.badges[i].badgeid == 1 && !badgesRaw.badges[i].appid) {
                 accountAge = badgesRaw.badges[i].completion_time
             }
@@ -48,14 +58,14 @@ async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw, badgesRaw) {
 
         const embed = new EmbedBuilder()
             .setAuthor({ name: `${userRaw.persona_name}`, url: `https://steamcommunity.com/profiles/${userRaw.steamid}`, iconURL: `https://avatars.akamai.steamstatic.com/${userRaw.avatar_url}_full.jpg`})
-            .setDescription(`Steam ID: ${userRaw.steamid}\nSteam Level: ${badgesRaw.player_level}`)
+            .setDescription(`**Steam ID:** ${userRaw.steamid}\n**Profile URL:** ${userRaw.profile_url || "N/A"}\n**Steam Level:** ${badgesRaw.player_level} (${badgesRaw.player_xp}/${badgesRaw.player_xp+badgesRaw.player_xp_needed_to_level_up} XP)`)
             if (accountAge) {
                 embed.addFields( { name: 'Account Created: ', value: `\`\`\`css\n${accountDate.toLocaleDateString()} ${accountDate.toLocaleTimeString()}\n${Math.round((currentDate-accountDate)/31556952/10)/100} years old\`\`\``})
             }
             embed.addFields(
                 { name: 'Top Games by Hours:', value: `${gameHours}`, inline: true},
                 { name: "Games Owned:", value: 
-                `\`\`\`css\n${gamesRaw.game_count} games\`\`\`\n**Library Value:**\n\`\`\`css\n$${totalPrice/100} USD at full price\n$${salePrice/100} USD with today's sales\`\`\``, 
+                `\`\`\`css\n${gamesRaw.game_count} games\n${gamesPlayed}/${gamesRaw.game_count} played (${Math.round(gamesPlayed/gamesRaw.game_count*100)}%)\`\`\`\n**Library Value:**\n\`\`\`css\n$${totalPrice/100} USD at full price\n$${salePrice/100} USD with today's sales\`\`\`\n**Account Playtime:**\n\`\`\`css\n${Math.round(accountPlaytime/60*100)/100} hours played\`\`\``, 
                 inline: true}
             )
         
@@ -72,8 +82,8 @@ async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw, badgesRaw) {
 // TODO: Change command to be a general user stats command for account worth (in games), steam level, top games, recent games, etc.
 module.exports = {
     data: new SlashCommandBuilder()
-    .setName('getuserhours')
-    .setDescription("Find a user's hours on Steam!")
+    .setName('userstats')
+    .setDescription("Find a user's stats on Steam!")
     .addStringOption(option =>
         option.setName('username')
             .setDescription('The username or steamid number of the user you want to search for')
