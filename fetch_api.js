@@ -1,22 +1,27 @@
 const axios = require('axios')
 const { JSDOM } = require('jsdom')
+const { getGuild } = require('./db/guilds')
 require('dotenv').config()
 
 // TODO: Add support for different country prices & languages
-// TODO: Server-side commands with mongodb database
-async function get_app_raw(app_id) {
+async function get_app_raw(appID, guildID) {
+    const guild = await getGuild(guildID)
+    let language = "english"
+    if (guild) {
+        language = guild.settings.language
+    }
 
     // TODO: Get rid of this function with getApp as replacement
     const headers = {
         method: 'GET',
-        url: `https://store.steampowered.com/api/appdetails?appids=${app_id}&cc=US`
+        // TODO: Get detailed_description on api instead of short_description for different languages
+        url: `https://store.steampowered.com/api/appdetails?appids=${appID}&l=${language}`
     }
 
     try {
         const response = await axios.request(headers);
-        if (response.data[app_id].success) {
-            //console.log(response.data[app_id].data)
-            return response.data[app_id].data
+        if (response.data[appID].success) {
+            return response.data[appID].data
         } else {
             console.log("Doesn't exist")
         }
