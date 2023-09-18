@@ -71,7 +71,7 @@ async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw, badgesRaw) {
             )
 
             // Database update
-            updateStatsGlobal(userRaw.steamid, gamesRaw.game_count, Math.round(accountPlaytime/60*100)/100, totalPrice/100, Math.round((currentDate-accountDate)/31556952/10)/100, badgesRaw.player_level, badgesRaw.player_xp)
+            updateStatsGlobal(userRaw.persona_name, userRaw.steamid, gamesRaw.game_count, Math.round(accountPlaytime/60*100)/100, totalPrice/100, Math.round((currentDate-accountDate)/31556952/10)/100, badgesRaw.player_level, badgesRaw.player_xp)
         
         return embed
     } else {

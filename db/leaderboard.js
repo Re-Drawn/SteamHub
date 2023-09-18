@@ -1,15 +1,22 @@
 const { getDatabase } = require('./index')
 
-async function updateStatsGlobal(steamID, numGames, playHours, libraryPrice, accountYears, accountLevel, accountXP) {
+async function getGlobalLeaderboard(sortBy) {
+    const db = getDatabase()
+    const collection = db.collection('leaderboard')
+
+    return collection.find().sort({ [sortBy]: -1 }).toArray()
+}
+
+async function updateStatsGlobal(steamName, steamID, numGames, playHours, libraryValue, accountYears, accountLevel, accountXP) {
     const db = getDatabase()
     const collection = db.collection('leaderboard')
     const user = await collection.findOne( { steamID: steamID } )
 
     if (user) {
-        collection.updateOne( { steamID: steamID }, { "$set": { numGames, playHours, libraryPrice, accountYears, accountLevel, accountXP } } )
+        collection.updateOne( { steamID: steamID }, { "$set": { steamName, numGames, playHours, libraryValue, accountYears, accountLevel, accountXP } } )
         console.log("update")
     } else {
-        collection.insertOne( { steamID, numGames, playHours, libraryPrice, accountYears, accountLevel, accountXP } )
+        collection.insertOne( { steamName, steamID, numGames, playHours, libraryValue, accountYears, accountLevel, accountXP } )
         console.log("insert")
     }
 }
@@ -31,4 +38,4 @@ async function updateStatsGlobal(steamID, numGames, playHours, libraryPrice, acc
 //
 //}
 
-module.exports = { updateStatsGlobal }
+module.exports = { getGlobalLeaderboard, updateStatsGlobal }
