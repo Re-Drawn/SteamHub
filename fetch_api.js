@@ -15,6 +15,7 @@ async function get_app_raw(appID, guildID) {
     const headers = {
         method: 'GET',
         // TODO: Get detailed_description on api instead of short_description for different languages
+        // Or use translator package
         url: `https://store.steampowered.com/api/appdetails?appids=${appID}&l=${language}`
     }
 

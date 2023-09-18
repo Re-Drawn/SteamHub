@@ -24,4 +24,9 @@ function getDatabase() {
     }
 }
 
-module.exports = { connectToDatabase, getDatabase }
+async function initializeGuild(guildID) {
+    const collection = db.collection('guilds')
+    await collection.insertOne({ guildID: guildID, settings: {language: "english"}, leaderboard: {numberOfGames: {}, libraryPrice: {}} })
+}
+
+module.exports = { connectToDatabase, getDatabase, initializeGuild }

@@ -1,16 +1,14 @@
-const { getDatabase } = require('./index')
-
-async function createGuild(guildID) {
-    const db = getDatabase()
-    const collection = db.collection('guilds')
-    await collection.insertOne({ guildid: guildID, settings: {language: "en"} })
-}
+const { getDatabase, initializeGuild } = require('./index')
 
 async function getGuild(guildID) {
     const db = getDatabase()
     const collection = db.collection('guilds')
-    const filter = { guildid: guildID }
+    const filter = { guildID: guildID }
     const result = await collection.findOne(filter)
+
+    if (!result) {
+        result = await initializeGuild(guildID)
+    }
 
     return result
 }
@@ -18,8 +16,7 @@ async function getGuild(guildID) {
 async function updateGuild(guildID, input) {
     const db = getDatabase()
     const collection = db.collection('guilds')
-    const filter = { guildid: guildID }
-    console.log(input)
+    const filter = { guildID: guildID }
 
     const update = {
         $set: {
@@ -27,8 +24,9 @@ async function updateGuild(guildID, input) {
         }
     }
     const result = await collection.findOne(filter)
+    // TODO: Add failsafe for initializeGuild fail
     if (!result) {
-        await createGuild(guildID)
+        await initializeGuild(guildID)
         console.log('GuildID not in database, creating one')
     }
 
@@ -36,4 +34,24 @@ async function updateGuild(guildID, input) {
 
 }
 
-module.exports = { createGuild, getGuild, updateGuild }
+async function toggleLeaderboard(guildID, input) {
+    const db = await getDatabase()
+    const collection = db.collection('guilds')
+    const filter = { guildID: guildID }
+    const result = await collection.findOne(filter)
+
+    const update = {
+        $set: {
+            'settings.leaderboard': input
+        }
+    }
+
+    if (!result) {
+        await initializeGuild(guildID)
+        console.log('GuildID not in database, creating one')
+    }
+
+    await collection.updateOne(filter, update)
+}
+
+module.exports = { getGuild, updateGuild, toggleLeaderboard }

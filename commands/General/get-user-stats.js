@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js')
 const { getUser, getUserGames, searchUser, getApp, getUserBadges } = require('../../fetch_api.js')
+const { updateStatsGlobal } = require('../../db/leaderboard.js')
 
 async function createUserEmbed(userRaw) {
     const embed = new EmbedBuilder()
@@ -68,6 +69,9 @@ async function createEmbed(isPrivate, userRaw, gamesRaw, pricesRaw, badgesRaw) {
                 `\`\`\`css\n${gamesRaw.game_count} games\n${gamesPlayed}/${gamesRaw.game_count} played (${Math.round(gamesPlayed/gamesRaw.game_count*100)}%)\`\`\`\n**Library Value:**\n\`\`\`css\n$${totalPrice/100} USD at full price\n$${salePrice/100} USD with today's sales\`\`\`\n**Account Playtime:**\n\`\`\`css\n${Math.round(accountPlaytime/60*100)/100} hours played\`\`\``, 
                 inline: true}
             )
+
+            // Database update
+            updateStatsGlobal(userRaw.steamid, gamesRaw.game_count, Math.round(accountPlaytime/60*100)/100, totalPrice/100, Math.round((currentDate-accountDate)/31556952/10)/100, badgesRaw.player_level, badgesRaw.player_xp)
         
         return embed
     } else {
