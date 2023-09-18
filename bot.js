@@ -4,13 +4,16 @@ require('dotenv').config()
 // Get discord.js stuff
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js')
 
+// Database Connection
+const { connectToDatabase } = require('./db')
+
 const fs = require('node:fs')
 const path = require('node:path')
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds]})
 client.commands = new Collection()
 
-function get_commands() {
+function getCommands() {
     const foldersPath = path.join(__dirname, 'commands')
     const commandFolders = fs.readdirSync(foldersPath)
 
@@ -53,5 +56,6 @@ client.on(Events.InteractionCreate, async interaction => {
 })
 
 
-get_commands()
+connectToDatabase()
+getCommands()
 client.login(process.env.CLIENT_TOKEN)

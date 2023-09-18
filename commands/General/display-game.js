@@ -84,7 +84,7 @@ module.exports = {
             let topResultID = searchRaw[gameNumber].appid
             // TODO: Integrate multiple appid search to get more results without having to query api for every game one at a time
             // https://store.steampowered.com/api/appdetails/?appids=32330,49520&filters=price_overview
-            let appRaw = await get_app_raw(topResultID)
+            let appRaw = await get_app_raw(topResultID, interaction.member.guild.id)
             let appMovies = appRaw.movies
             let playerCount = await getPlayerCount(appRaw.steam_appid)
 
