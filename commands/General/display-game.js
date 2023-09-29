@@ -1,7 +1,26 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, Embed } = require('discord.js')
 const { get_app_raw, searchGame, getPlayerCount } = require('../../fetch_api.js')
 const { decodeHTMLEntities } = require('../../decode-entities.js')
+const { initializeApp } = require('../../db/index.js')
+const { appInCache } = require('../../db/game.js')
 
+async function checkCache(appID) {
+    const inCache = await appInCache(appID)
+    let appRaw, playerCount
+    if (inCache) {
+        // FIXME: If a server has a different language, that language's app info goes into the cache and will output that language no matter the server settings
+        console.log('found in cache')
+        appRaw = inCache.appRaw
+        playerCount = inCache.playerCount
+    } else {
+        console.log('new entry or outdated entry')
+        appRaw = await get_app_raw(appID)
+        playerCount = await getPlayerCount(appRaw.steam_appid)
+        // TODO: Move all database change functions back into db folder to keep it consistent
+        initializeApp(appID, appRaw, playerCount)
+    }
+    return [ appRaw, playerCount ]
+}
 
 function priceText(appRaw) {
 
@@ -76,17 +95,17 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply()
         const searchInput = interaction.options.get('game').value
-
         const searchRaw = await searchGame(searchInput)
 
+        // TODO: Fix huge if else block
         if (searchRaw) {
+            const startTime = Date.now()
             let gameNumber = 0
             let topResultID = searchRaw[gameNumber].appid
+            let [ appRaw, playerCount ] = await checkCache(topResultID)
+            let appMovies = appRaw.movies
             // TODO: Integrate multiple appid search to get more results without having to query api for every game one at a time
             // https://store.steampowered.com/api/appdetails/?appids=32330,49520&filters=price_overview
-            let appRaw = await get_app_raw(topResultID, interaction.member.guild.id)
-            let appMovies = appRaw.movies
-            let playerCount = await getPlayerCount(appRaw.steam_appid)
 
             const trailer = new ButtonBuilder()
                 .setCustomId('trailer')
@@ -109,6 +128,7 @@ module.exports = {
     
             let embed = await createEmbed(appRaw, playerCount, gameNumber)
             const message = await interaction.editReply({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
+            console.log(`Execution time: ${Date.now()-startTime} ms`)
 
             const filter = (interaction) => interaction.customId === 'wronggame' || interaction.customId === 'trailer' || interaction.customId === 'back';
             // TODO: Make collector timer increase when trailer button is clicked, but short when not clicked.
@@ -119,10 +139,10 @@ module.exports = {
                     if (i.customId === 'wronggame') {
                         if (gameNumber < searchRaw.length-1) {
                             gameNumber = gameNumber + 1
+                            const startTime = Date.now()
                             topResultID = searchRaw[gameNumber].appid
-                            appRaw = await get_app_raw(topResultID)
+                            let [ appRaw, playerCount] = await checkCache(topResultID)
                             appMovies = appRaw.movies
-                            playerCount = await getPlayerCount(appRaw.steam_appid)
                             embed = await createEmbed(appRaw, playerCount, gameNumber)
                             if (appMovies) {
                                 buttons.setComponents(trailer, wrongGame)
@@ -130,6 +150,7 @@ module.exports = {
                                 buttons.setComponents(wrongGame)
                             }
                             await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [buttons]})
+                            console.log(`Execution time: ${Date.now()-startTime} ms`)
                             await collector.resetTimer()
                         } else {
                             wrongGame.setLabel("No more results.").setStyle(ButtonStyle.Secondary).setDisabled(true)

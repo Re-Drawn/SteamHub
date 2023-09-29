@@ -94,6 +94,7 @@ module.exports = {
             .setRequired(true)),
 
     // TODO: Get faster execution time on command
+    // Could do this by caching the results into db and saving it for 1 hour to get quicker output
     async execute(interaction) {
         await interaction.deferReply()
         const searchInput = interaction.options.get('username').value

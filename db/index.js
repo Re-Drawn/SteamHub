@@ -26,7 +26,12 @@ function getDatabase() {
 
 async function initializeGuild(guildID) {
     const collection = db.collection('guilds')
-    await collection.insertOne({ guildID: guildID, settings: {language: "english"}, leaderboard: {numberOfGames: {}, libraryPrice: {}} })
+    await collection.insertOne({ guildID: guildID, settings: {language: "english"} })
 }
 
-module.exports = { connectToDatabase, getDatabase, initializeGuild }
+async function initializeApp(appID, appRaw, playerCount) {
+    const collection = db.collection('apps')
+    await collection.insertOne({ appID: appID, data: { appRaw: appRaw, playerCount: playerCount } })
+}
+
+module.exports = { connectToDatabase, getDatabase, initializeGuild, initializeApp }

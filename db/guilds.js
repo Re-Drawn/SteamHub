@@ -34,24 +34,5 @@ async function updateGuild(guildID, input) {
 
 }
 
-async function toggleLeaderboard(guildID, input) {
-    const db = await getDatabase()
-    const collection = db.collection('guilds')
-    const filter = { guildID: guildID }
-    const result = await collection.findOne(filter)
 
-    const update = {
-        $set: {
-            'settings.leaderboard': input
-        }
-    }
-
-    if (!result) {
-        await initializeGuild(guildID)
-        console.log('GuildID not in database, creating one')
-    }
-
-    await collection.updateOne(filter, update)
-}
-
-module.exports = { getGuild, updateGuild, toggleLeaderboard }
+module.exports = { getGuild, updateGuild }

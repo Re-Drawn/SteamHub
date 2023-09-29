@@ -5,18 +5,18 @@ require('dotenv').config()
 
 // TODO: Add support for different country prices & languages
 async function get_app_raw(appID, guildID) {
-    const guild = await getGuild(guildID)
+    /*const guild = await getGuild(guildID)
     let language = "english"
     if (guild) {
         language = guild.settings.language
-    }
+    }*/
 
     // TODO: Get rid of this function with getApp as replacement
     const headers = {
         method: 'GET',
         // TODO: Get detailed_description on api instead of short_description for different languages
         // Or use translator package
-        url: `https://store.steampowered.com/api/appdetails?appids=${appID}&l=${language}`
+        url: `https://store.steampowered.com/api/appdetails?appids=${appID}`
     }
 
     try {

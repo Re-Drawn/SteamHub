@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js')
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js')
 const { getGlobalLeaderboard } = require('../../db/leaderboard')
 
 async function createEmbed(input) {
