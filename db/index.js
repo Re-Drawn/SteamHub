@@ -31,7 +31,14 @@ async function initializeGuild(guildID) {
 
 async function initializeApp(appID, appRaw, playerCount) {
     const collection = db.collection('apps')
-    await collection.insertOne({ appID: appID, data: { appRaw: appRaw, playerCount: playerCount } })
+    const filter = { appID: appID }
+    const result = await collection.findOne(filter)
+    if (result) {
+        console.log("update")
+        await collection.updateOne(result, { "$set": { appID: appID, data: { appRaw: appRaw, playerCount: playerCount }, lastUpdated: Date.now() } })
+    } else {
+        await collection.insertOne({ appID: appID, data: { appRaw: appRaw, playerCount: playerCount }, lastUpdated: Date.now() })
+    }
 }
 
 module.exports = { connectToDatabase, getDatabase, initializeGuild, initializeApp }
