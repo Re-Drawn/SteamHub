@@ -3,7 +3,6 @@ const { getDatabase, initializeApp } = require('./index')
 async function getUpdateTime(resultUpdatedTime) {
     const timeDifference = Date.now() - resultUpdatedTime
     // 3600000 ms = 1 hr
-    console.log(timeDifference)
     // TODO: Look into MongoDB TTL for auto removal
     if (timeDifference > 3600000) {
         return true

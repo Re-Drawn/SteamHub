@@ -4,7 +4,7 @@ const { getGuild } = require('./db/guilds')
 require('dotenv').config()
 
 // TODO: Add support for different country prices & languages
-async function get_app_raw(appID, guildID) {
+async function getApp(appID, guildID) {
     /*const guild = await getGuild(guildID)
     let language = "english"
     if (guild) {
@@ -247,7 +247,7 @@ async function getUserGames(steamID) {
     }
 }
 
-async function getApp(appIDs) {
+async function getAppOverviews(appIDs) {
 
     // TODO: Find api limits for amount of appids that can be queried at once
     const query = appIDs.join(',')
@@ -269,4 +269,4 @@ async function getApp(appIDs) {
     }
 }
 
-module.exports = { get_app_raw, userReviews, getUser, searchGame, getGameNews, getPlayerCount, getUserGames, searchUser, getUserBadges, getApp }
+module.exports = { getApp, userReviews, getUser, searchGame, getGameNews, getPlayerCount, getUserGames, searchUser, getUserBadges, getAppOverviews }
