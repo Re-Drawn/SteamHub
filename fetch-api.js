@@ -269,4 +269,47 @@ async function getAppOverviews(appIDs) {
     }
 }
 
-module.exports = { getApp, userReviews, getUser, searchGame, getGameNews, getPlayerCount, getUserGames, searchUser, getUserBadges, getAppOverviews }
+async function getTopConcurrentPlayers() {
+    const headers = {
+        method: 'GET',
+        url: `https://api.steampowered.com/ISteamChartsService/GetGamesByConcurrentPlayers/v1/?key=${process.env.STEAM_TOKEN}`
+    }
+
+    try {
+        const response = await axios.request(headers)
+        if (response.data) {
+            return response.data.response
+        } else {
+            return false
+        }
+    } catch (error) {
+        console.error(error)
+    }
+}
+
+async function getAppList(appIDs) {
+    const headers = {
+        method: 'GET',
+        url: `https://api.steampowered.com/IStoreService/GetAppList/v1/?key=${process.env.STEAM_TOKEN}&max_results=50000&include_games=true&include_software=true`
+    }
+
+    try {
+        const result = []
+        while (true) {
+            const response = await axios.request(headers)
+            if (response.data) {
+                const data = response.data.response
+                result.push(data.apps)
+                if (!data.have_more_results) {
+                    break
+                }
+                headers.url = `https://api.steampowered.com/IStoreService/GetAppList/v1/?key=${process.env.STEAM_TOKEN}&max_results=50000&last_appid=${data.last_appid}&include_games=true&include_software=true`
+            }
+        }
+        return result
+    } catch(error) {
+        console.error(error)
+    }
+}
+
+module.exports = { getApp, userReviews, getUser, searchGame, getGameNews, getPlayerCount, getUserGames, searchUser, getUserBadges, getAppOverviews, getTopConcurrentPlayers, getAppList }
