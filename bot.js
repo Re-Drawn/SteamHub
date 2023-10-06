@@ -48,7 +48,9 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     try {
+        const startTime = Date.now()
         await command.execute(interaction)
+        console.log(`Execution time: ${Date.now()-startTime} ms`)
     } catch (error) {
         console.error(error)
     }

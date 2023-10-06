@@ -10,6 +10,31 @@ const prev = new ButtonBuilder()
     .setLabel("◀️")
     .setStyle(ButtonStyle.Secondary)
 
+let concurrentRaw
+let appData = new Array(100).fill(0)
+
+async function updateInfo() {
+    concurrentRaw = await getTopConcurrentPlayers()
+    const appIDs = []
+    for (game of concurrentRaw.ranks) {
+        appIDs.push(game.appid)
+    }
+
+    const listResult = await getAppList(appIDs)
+    // TODO: Clean up
+    for (page of listResult) {
+        for (app of page) {
+            let idx = appIDs.indexOf(app.appid)
+            if (idx != -1) {
+                appData[idx] = app
+            }
+        }
+    }
+}
+
+updateInfo()
+setInterval(updateInfo, 1800000)
+
 function createEmbed(concurrentRaw, appData, pageNum) {
 
     let gameText = ""
@@ -39,32 +64,13 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('topplayercount')
         .setDescription('Get the top 100 games by concurrent player count'),
-        
+    
     async execute(interaction) {
         await interaction.deferReply()
-        const concurrentRaw = await getTopConcurrentPlayers()
-        const appIDs = []
-        for (game of concurrentRaw.ranks) {
-            appIDs.push(game.appid)
-        }
-        //const overviewRaw = await getAppOverviews(appids)
-        //console.log(overviewRaw)
-        const listResult = await getAppList(appIDs)
-        // TODO: Clean up
-        const data = new Array(100).fill(0)
-        for (page of listResult) {
-            for (app of page) {
-                let idx = appIDs.indexOf(app.appid)
-                if (idx != -1) {
-                    data[idx] = app
-                }
-            }
-        }
 
         // FIXME: Empty array results such as tModLoader and Rocket League
-        
         let pageNum = 0
-        let embed = await createEmbed(concurrentRaw, data, pageNum)
+        let embed = await createEmbed(concurrentRaw, appData, pageNum)
         const actionRow = new ActionRowBuilder()
             .addComponents(next)
         

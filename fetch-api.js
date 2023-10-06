@@ -290,6 +290,7 @@ async function getTopConcurrentPlayers() {
 async function getAppList(appIDs) {
     const headers = {
         method: 'GET',
+        // TODO: Look into what price_change_number is (could prove to be useful for finding sales)
         url: `https://api.steampowered.com/IStoreService/GetAppList/v1/?key=${process.env.STEAM_TOKEN}&max_results=50000&include_games=true&include_software=true`
     }
 

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, Embed } = require('discord.js')
+const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ComponentType } = require('discord.js')
 const { getApp, searchGame, getPlayerCount } = require('../../fetch-api.js')
 const { decodeHTMLEntities } = require('../../decode-entities.js')
 const { initializeApp } = require('../../db/index.js')
@@ -52,6 +52,32 @@ function priceText(appRaw) {
 
 }
 
+async function resolveGame(interaction, message, searchRaw, actionRow, searchInput) {
+
+    const menu = new StringSelectMenuBuilder()
+        .setCustomId('resolvegame')
+        .setPlaceholder("Select the game you're looking for")
+    
+    for (let i = 0; i < searchRaw.length; i++) {
+        let option = new StringSelectMenuOptionBuilder()
+            .setLabel(searchRaw[i].name)
+            .setValue(searchRaw[i].appid)
+        menu.addOptions(option)
+    }
+
+    actionRow.setComponents(menu)
+    await message.edit( {content: '', embeds: [], components: [actionRow]} )
+
+    const collector = message.createMessageComponentCollector({ time: 300_000 })
+    collector.on('collect', async i => {
+        if (i.user.id != interaction.user.id) return
+
+        collector.stop()
+        embed = await setupAppReply(i.values[0], message, actionRow, searchInput)
+        await i.deferUpdate()
+    })
+}
+
 function createEmbed(appRaw, playerCount) {
     const embed = new EmbedBuilder()
         .setTitle(appRaw.name)
@@ -85,8 +111,7 @@ function createEmbed(appRaw, playerCount) {
     return embed
 }
 
-async function setupAppReply(appID, message, actionRow, searchInput) {
-    const startTime = Date.now()
+async function setupAppReply(appID, message, actionRow) {
     let [ appRaw, playerCount ] = await checkCache(appID)
     appMovies = appRaw.movies
     const embed = await createEmbed(appRaw, playerCount)
@@ -96,8 +121,7 @@ async function setupAppReply(appID, message, actionRow, searchInput) {
     wrongGame.setStyle(ButtonStyle.Danger).setLabel('Wrong Game?').setDisabled(false)
     actionRow.addComponents(wrongGame)
 
-    await message.edit( {content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [actionRow]})
-    console.log(`Execution time: ${Date.now()-startTime} ms`)
+    await message.edit( {content: '', embeds: [embed], components: [actionRow]})
     return embed
 }
 
@@ -111,6 +135,7 @@ module.exports = {
                 .setRequired(true)),
 
     async execute(interaction) {
+        // TODO: See if use of select menus can prove to be worth it
         const message = await interaction.deferReply()
         const searchInput = interaction.options.get('game').value
         const searchRaw = await searchGame(searchInput)
@@ -121,26 +146,28 @@ module.exports = {
         }
 
         const actionRow = new ActionRowBuilder()
-        let gameNumber = 0
-        let embed = await setupAppReply(searchRaw[gameNumber].appid, message, actionRow, searchInput)
+        let embed = await setupAppReply(searchRaw[0].appid, message, actionRow, searchInput)
         // TODO: Integrate multiple appid search to get more results without having to query api for every game one at a time
         // https://store.steampowered.com/api/appdetails/?appids=32330,49520&filters=price_overview
 
-        const filter = (interaction) => interaction.customId === 'wronggame' || interaction.customId === 'trailer' || interaction.customId === 'back';
+        const filter = (interaction) => interaction.customId === 'wronggame' || interaction.customId === 'trailer' || interaction.customId === 'back'
         // TODO: Make collector timer increase when trailer button is clicked, but short when not clicked.
-        const collector = message.createMessageComponentCollector({ filter, time: 300_000 });
+        const collector = message.createMessageComponentCollector({ filter, time: 300_000 })
 
         collector.on('collect', async i => {
-            if (i.user.id != interaction.user.id) return
+            if (i.user.id != interaction.user.id) {
+                await i.reply( { content: 'You are not the command user! Please use the command yourself.', ephemeral: true } )
+                return
+            }
 
             switch(i.customId) {
                 case 'wronggame':
-                    if (gameNumber < searchRaw.length-1) {
-                        gameNumber += 1
-                        embed = await setupAppReply(searchRaw[gameNumber].appid, message, actionRow, searchInput)
+                    if (searchRaw.length > 1) {
+                        await resolveGame(interaction, message, searchRaw, actionRow, searchInput)
                     } else {
-                        wrongGame.setLabel("No more results.").setStyle(ButtonStyle.Secondary).setDisabled(true)
-                        await message.edit({ components: [actionRow] })
+                        actionRow.setComponents(trailer)
+                        await interaction.followUp({ content: 'No other results. Please broaden your search input to get more results.', ephemeral: true })
+                        await message.edit({ content: '', embeds: [embed], components: [actionRow]})
                     }
                     break
                 case 'trailer':
@@ -150,14 +177,15 @@ module.exports = {
                     break
                 case 'back':
                     if (appMovies) actionRow.setComponents(trailer)
-                    await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: [actionRow]})
+                    actionRow.addComponents(wrongGame)
+                    await message.edit({ content: '', embeds: [embed], components: [actionRow]})
             }
             await collector.resetTimer()
             await i.deferUpdate()
         })
 
         collector.on('end', async () => {
-            await message.edit({ content: `Here is the top result for your search "${searchInput}":`, embeds: [embed], components: []})
+            await message.edit({ content: '', embeds: [embed], components: []})
         })
 
     }
