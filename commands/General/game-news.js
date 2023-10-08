@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js')
-const { get_app_raw, searchGame, getGameNews } = require('../../fetch-api.js') 
+const { getApp, searchGame, getGameNews } = require('../../fetch-api.js') 
 
 async function createEmbed(appRaw, steamNews) {
     const embed = new EmbedBuilder()
@@ -33,8 +33,8 @@ module.exports = {
             return
         }
 
-        const appRaw = await get_app_raw(search[0].appid)
-        const newsRaw = await getGameNews(search[0].appid)
+        const appRaw = await getApp(searchRaw[0].appid)
+        const newsRaw = await getGameNews(searchRaw[0].appid)
 
         // TODO: Clean up
         // Clean up html to readable format

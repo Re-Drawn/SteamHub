@@ -97,7 +97,7 @@ module.exports = {
                     actionRow.setComponents(prev, next)
                 }
             }
-            embed = await createEmbed(concurrentRaw, data, pageNum)
+            embed = await createEmbed(concurrentRaw, appData, pageNum)
             message.edit({ embeds: [embed], components: [actionRow] })
             await collector.resetTimer()
             await i.deferUpdate()
