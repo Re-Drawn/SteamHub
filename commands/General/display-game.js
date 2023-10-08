@@ -17,6 +17,8 @@ const back = new ButtonBuilder()
     .setLabel('Back')
     .setStyle(ButtonStyle.Secondary)
 
+const emojis = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"]
+
 async function checkCache(appID) {
     const inCache = await appInCache(appID)
     let appRaw, playerCount
@@ -58,10 +60,11 @@ async function resolveGame(interaction, message, searchRaw, actionRow, searchInp
         .setCustomId('resolvegame')
         .setPlaceholder("Select the game you're looking for")
     
-    for (let i = 0; i < searchRaw.length; i++) {
+    for (let i = 0; i < Math.min(11,searchRaw.length); i++) {
         let option = new StringSelectMenuOptionBuilder()
             .setLabel(searchRaw[i].name)
             .setValue(searchRaw[i].appid)
+            .setEmoji(emojis[i])
         menu.addOptions(option)
     }
 
